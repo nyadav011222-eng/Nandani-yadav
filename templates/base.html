@@ -26,6 +26,7 @@
 
     <div class="user-area">
         {{ session.get('full_name') }}
+        <a href="{{ url_for('account') }}">Account</a>
         <a href="{{ url_for('logout') }}">Logout</a>
     </div>
 

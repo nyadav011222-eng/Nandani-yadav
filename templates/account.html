@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Account Settings</h1>
+
+<div class="panel account-panel">
+    <form method="POST" class="form-grid">
+        <div>
+            <label for="full-name">Name</label>
+            <input id="full-name" name="full_name" value="{{ user['full_name'] }}" required>
+        </div>
+
+        <div>
+            <label for="username">Username</label>
+            <input id="username" name="username" value="{{ user['username'] }}" required>
+        </div>
+
+        <div class="full">
+            <label for="password">New Password</label>
+            <input id="password" name="password" type="password" minlength="6" placeholder="Leave blank to keep current password">
+        </div>
+
+        <div class="full">
+            <button class="btn primary" type="submit">Save Account</button>
+        </div>
+    </form>
+</div>
+
+{% endblock %}
