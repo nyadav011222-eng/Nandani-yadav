@@ -1,0 +1,537 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: #f4f6f9;
+    color: #1f2937;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+
+/* TOP BAR */
+
+.topbar {
+    background: #172554;
+    color: white;
+    padding: 16px 25px;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.brand {
+    font-size: 25px;
+    font-weight: bold;
+}
+
+.user-area {
+    display: flex;
+    gap: 18px;
+    align-items: center;
+}
+
+.user-area a {
+    background: rgba(255,255,255,0.15);
+    padding: 8px 12px;
+    border-radius: 6px;
+}
+
+
+/* NAVBAR */
+
+.navbar {
+    background: white;
+    padding: 12px 25px;
+
+    display: flex;
+    gap: 20px;
+
+    border-bottom: 1px solid #ddd;
+}
+
+.navbar a {
+    font-weight: 600;
+}
+
+.navbar a:hover {
+    color: #2563eb;
+}
+
+
+/* CONTAINER */
+
+.container {
+    max-width: 1200px;
+    margin: auto;
+    padding: 25px;
+}
+
+.subtitle {
+    color: #6b7280;
+    margin-bottom: 25px;
+}
+
+
+/* CARDS */
+
+.cards {
+    display: grid;
+    grid-template-columns:
+        repeat(4, 1fr);
+
+    gap: 20px;
+
+    margin-bottom: 25px;
+}
+
+.card {
+    background: white;
+    padding: 25px;
+
+    border-radius: 12px;
+
+    box-shadow:
+        0 3px 12px rgba(0,0,0,0.07);
+}
+
+.card h3 {
+    color: #6b7280;
+    margin-bottom: 10px;
+}
+
+.card strong {
+    font-size: 30px;
+}
+
+
+/* PANEL */
+
+.panel {
+    background: white;
+    padding: 25px;
+    margin-bottom: 25px;
+
+    border-radius: 12px;
+
+    box-shadow:
+        0 3px 12px rgba(0,0,0,0.06);
+}
+
+.panel h2 {
+    margin-bottom: 20px;
+}
+
+
+/* FORM */
+
+.form-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, 1fr);
+
+    gap: 18px;
+}
+
+.form-grid .full {
+    grid-column: 1 / -1;
+}
+
+label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 7px;
+}
+
+input,
+select {
+    width: 100%;
+
+    padding: 11px 12px;
+
+    border: 1px solid #d1d5db;
+
+    border-radius: 7px;
+
+    font-size: 15px;
+
+    background: white;
+}
+
+input:focus,
+select:focus {
+    outline: none;
+
+    border-color: #2563eb;
+
+    box-shadow:
+        0 0 0 3px
+        rgba(37,99,235,0.1);
+}
+
+
+/* BUTTON */
+
+.btn {
+    border: none;
+
+    background: #e5e7eb;
+
+    padding: 10px 16px;
+
+    border-radius: 7px;
+
+    cursor: pointer;
+
+    font-weight: 600;
+
+    display: inline-block;
+}
+
+.btn:hover {
+    opacity: 0.88;
+}
+
+.btn.primary {
+    background: #2563eb;
+    color: white;
+}
+
+.btn.danger {
+    background: #dc2626;
+    color: white;
+}
+
+.btn.small {
+    padding: 7px 10px;
+    font-size: 13px;
+}
+
+
+/* TABLE */
+
+.table-wrapper {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    padding: 12px;
+
+    border-bottom: 1px solid #e5e7eb;
+
+    text-align: left;
+}
+
+th {
+    background: #f8fafc;
+}
+
+td input {
+    min-width: 100px;
+}
+
+.actions {
+    display: flex;
+    gap: 7px;
+}
+
+
+/* SEARCH */
+
+.search-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    gap: 15px;
+
+    margin-bottom: 20px;
+}
+
+.search-row form {
+    display: flex;
+    gap: 8px;
+}
+
+
+/* ATTENDANCE */
+
+.attendance-header {
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    margin-bottom: 20px;
+}
+
+.attendance-btn {
+    min-width: 88px;
+    height: 40px;
+
+    border: 2px solid transparent;
+
+    border-radius: 7px;
+
+    font-size: 20px;
+
+    cursor: pointer;
+
+    opacity: 0.45;
+    margin-right: 6px;
+}
+
+.attendance-btn.selected {
+    opacity: 1;
+    border-color: #111827;
+}
+
+.attendance-btn.present {
+    background: #16a34a;
+    color: white;
+}
+
+.attendance-btn.absent {
+    background: #dc2626;
+    color: white;
+}
+
+.attendance-actions {
+    display: flex;
+    gap: 10px;
+
+    margin-top: 20px;
+}
+
+
+/* BADGES */
+
+.badge {
+    padding: 5px 9px;
+
+    border-radius: 20px;
+
+    font-weight: bold;
+}
+
+.success-badge {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.danger-badge {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+
+/* ALERT */
+
+.alert {
+    padding: 12px 15px;
+
+    border-radius: 7px;
+
+    margin-bottom: 15px;
+}
+
+.alert.success {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.alert.danger {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+
+/* LOGIN */
+
+.login-page {
+    min-height: 100vh;
+
+    display: flex;
+
+    justify-content: center;
+
+    align-items: center;
+
+    background: #172554;
+}
+
+.login-card {
+    background: white;
+
+    width: 400px;
+
+    max-width: 90%;
+
+    padding: 35px;
+
+    border-radius: 15px;
+
+    box-shadow:
+        0 15px 40px
+        rgba(0,0,0,0.2);
+}
+
+.login-card h1 {
+    text-align: center;
+
+    font-size: 35px;
+
+    color: #172554;
+
+    margin-bottom: 5px;
+}
+
+.login-card p {
+    text-align: center;
+
+    color: #6b7280;
+
+    margin-bottom: 25px;
+}
+
+.login-card form {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 10px;
+}
+
+.login-card button {
+    margin-top: 10px;
+}
+
+.login-card small {
+    display: block;
+
+    text-align: center;
+
+    margin-top: 20px;
+
+    color: #6b7280;
+}
+
+
+/* PAGE HEADER */
+
+.page-header {
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    margin-bottom: 25px;
+}
+
+
+/* EMPTY */
+
+.empty {
+    text-align: center;
+
+    color: #6b7280;
+
+    padding: 30px;
+}
+
+
+/* HIDDEN */
+
+.hidden {
+    display: none;
+}
+
+
+/* MOBILE */
+
+@media (max-width: 800px) {
+
+    .cards {
+        grid-template-columns:
+            repeat(2, 1fr);
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .navbar {
+        overflow-x: auto;
+
+        white-space: nowrap;
+    }
+
+    .attendance-header {
+        flex-direction: column;
+
+        align-items: flex-start;
+
+        gap: 15px;
+    }
+
+}
+
+
+@media (max-width: 500px) {
+
+    .topbar {
+        padding: 13px;
+
+        flex-direction: column;
+
+        gap: 10px;
+    }
+
+    .container {
+        padding: 15px;
+    }
+
+    .cards {
+        grid-template-columns: 1fr;
+    }
+
+    .search-row {
+        flex-direction: column;
+
+        align-items: stretch;
+    }
+
+    .search-row form {
+        width: 100%;
+    }
+
+    .attendance-actions {
+        flex-direction: column;
+    }
+
+    .page-header {
+        flex-direction: column;
+
+        align-items: flex-start;
+
+        gap: 15px;
+    }
+
+}
