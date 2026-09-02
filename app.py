@@ -275,6 +275,62 @@ def settings():
     return redirect(url_for("dashboard"))
 
 
+@app.route("/account", methods=["GET", "POST"])
+@login_required
+def account():
+
+    if request.method == "POST":
+        full_name = request.form.get("full_name", "").strip()
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+
+        if not full_name or not username:
+            flash("Name and username are required.", "danger")
+            return redirect(url_for("account"))
+
+        conn = get_db()
+
+        try:
+            if password:
+                conn.execute("""
+                    UPDATE users
+                    SET username = ?, full_name = ?, password = ?
+                    WHERE id = ?
+                """, (
+                    username,
+                    full_name,
+                    generate_password_hash(password),
+                    session["user_id"]
+                ))
+            else:
+                conn.execute("""
+                    UPDATE users
+                    SET username = ?, full_name = ?
+                    WHERE id = ?
+                """, (username, full_name, session["user_id"]))
+
+            conn.commit()
+        except sqlite3.IntegrityError:
+            conn.rollback()
+            conn.close()
+            flash("That username is already in use.", "danger")
+            return redirect(url_for("account"))
+
+        conn.close()
+        session["username"] = username
+        session["full_name"] = full_name
+        flash("Account details updated.", "success")
+        return redirect(url_for("account"))
+
+    conn = get_db()
+    user = conn.execute(
+        "SELECT username, full_name FROM users WHERE id = ?",
+        (session["user_id"],)
+    ).fetchone()
+    conn.close()
+    return render_template("account.html", user=user)
+
+
 # --------------------------------------------------
 # STUDENTS
 # --------------------------------------------------
