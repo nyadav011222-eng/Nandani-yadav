@@ -60,7 +60,8 @@ def init_db():
     CREATE TABLE IF NOT EXISTS subjects (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
-        code TEXT NOT NULL UNIQUE
+        code TEXT NOT NULL UNIQUE,
+        professor_name TEXT DEFAULT ''
     );
 
     CREATE TABLE IF NOT EXISTS lectures (
@@ -83,6 +84,13 @@ def init_db():
         FOREIGN KEY(student_id) REFERENCES students(id) ON DELETE CASCADE
     );
     """)
+
+    subject_columns = {
+        row[1]
+        for row in conn.execute("PRAGMA table_info(subjects)").fetchall()
+    }
+    if "professor_name" not in subject_columns:
+        conn.execute("ALTER TABLE subjects ADD COLUMN professor_name TEXT DEFAULT ''")
 
     # Default teacher
     user = conn.execute(
@@ -517,6 +525,7 @@ def add_subject():
 
     name = request.form.get("name", "").strip()
     code = request.form.get("code", "").strip().upper()
+    professor_name = request.form.get("professor_name", "").strip()
 
     if not name or not code:
         flash("Subject name and code are required.", "danger")
@@ -527,9 +536,9 @@ def add_subject():
     try:
 
         conn.execute("""
-            INSERT INTO subjects(name, code)
-            VALUES (?, ?)
-        """, (name, code))
+            INSERT INTO subjects(name, code, professor_name)
+            VALUES (?, ?, ?)
+        """, (name, code, professor_name))
 
         conn.commit()
 
