@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="page-header">
+
+    <div>
+        <h1>Students</h1>
+        <p>Manage your student records.</p>
+    </div>
+
+</div>
+
+
+<div class="panel">
+
+    <h2>Add Student</h2>
+
+    <form method="POST"
+          action="{{ url_for('add_student') }}"
+          class="form-grid">
+
+        <div>
+
+            <label>Roll Number</label>
+
+            <input
+                name="roll_no"
+                required
+                placeholder="1"
+            >
+
+        </div>
+
+        <div>
+
+            <label>PRN Number</label>
+
+            <input
+                name="prn"
+                required
+                placeholder="PRN123456"
+            >
+
+        </div>
+
+        <div>
+
+            <label>Student Name</label>
+
+            <input
+                name="name"
+                required
+                placeholder="Student Name"
+            >
+
+        </div>
+
+        <div>
+
+            <label>Class</label>
+
+            <input
+                name="class_name"
+                placeholder="B.Tech CSE"
+            >
+
+        </div>
+
+        <div>
+
+            <label>Division</label>
+
+            <input
+                name="division"
+                placeholder="A"
+            >
+
+        </div>
+
+        <div class="full">
+
+            <button class="btn primary">
+                + Add Student
+            </button>
+
+        </div>
+
+    </form>
+
+</div>
+
+
+<div class="panel">
+
+    <div class="search-row">
+
+        <h2>Student List</h2>
+
+        <form method="GET">
+
+            <input
+                name="search"
+                value="{{ search }}"
+                placeholder="Search name / roll / PRN"
+            >
+
+            <button class="btn">
+                Search
+            </button>
+
+        </form>
+
+    </div>
+
+
+    <div class="table-wrapper">
+
+        <table>
+
+            <thead>
+
+            <tr>
+                <th>Roll</th>
+                <th>PRN</th>
+                <th>Name</th>
+                <th>Class</th>
+                <th>Division</th>
+                <th>Actions</th>
+            </tr>
+
+            </thead>
+
+            <tbody>
+
+            {% for student in students %}
+
+            <tr>
+
+                <form method="POST"
+                      action="{{ url_for('edit_student', student_id=student['id']) }}">
+
+                    <td>
+                        <input
+                            name="roll_no"
+                            value="{{ student['roll_no'] }}"
+                        >
+                    </td>
+
+                    <td>
+                        <input
+                            name="prn"
+                            value="{{ student['prn'] }}"
+                        >
+                    </td>
+
+                    <td>
+                        <input
+                            name="name"
+                            value="{{ student['name'] }}"
+                        >
+                    </td>
+
+                    <td>
+                        <input
+                            name="class_name"
+                            value="{{ student['class_name'] }}"
+                        >
+                    </td>
+
+                    <td>
+                        <input
+                            name="division"
+                            value="{{ student['division'] }}"
+                        >
+                    </td>
+
+                    <td class="actions">
+
+                        <button class="btn small">
+                            Save
+                        </button>
+
+                </form>
+
+                        <form method="POST"
+                              action="{{ url_for('delete_student', student_id=student['id']) }}"
+                              onsubmit="return confirm('Delete this student?')">
+
+                            <button class="btn danger small">
+                                Delete
+                            </button>
+
+                        </form>
+
+                    </td>
+
+            </tr>
+
+            {% else %}
+
+            <tr>
+                <td colspan="6" class="empty">
+                    No students found.
+                </td>
+            </tr>
+
+            {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+{% endblock %}

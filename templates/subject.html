@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Subjects</h1>
+
+<div class="panel">
+
+    <h2>Add Subject</h2>
+
+    <form method="POST"
+          action="{{ url_for('add_subject') }}"
+          class="form-grid">
+
+        <div>
+
+            <label>Subject Name</label>
+
+            <input
+                name="name"
+                required
+                placeholder="Data Structures"
+            >
+
+        </div>
+
+        <div>
+
+            <label>Subject Code</label>
+
+            <input
+                name="code"
+                required
+                placeholder="DS"
+            >
+
+        </div>
+
+        <div>
+
+            <button class="btn primary">
+                + Add Subject
+            </button>
+
+        </div>
+
+    </form>
+
+</div>
+
+
+<div class="panel">
+
+    <h2>Subject List</h2>
+
+    <div class="table-wrapper">
+
+        <table>
+
+            <thead>
+
+            <tr>
+                <th>Subject</th>
+                <th>Code</th>
+                <th>Action</th>
+            </tr>
+
+            </thead>
+
+            <tbody>
+
+            {% for subject in subjects %}
+
+            <tr>
+
+                <td>{{ subject['name'] }}</td>
+
+                <td>{{ subject['code'] }}</td>
+
+                <td>
+
+                    <form
+                        method="POST"
+                        action="{{ url_for('delete_subject', subject_id=subject['id']) }}"
+                        onsubmit="return confirm('Delete subject?')">
+
+                        <button class="btn danger small">
+                            Delete
+                        </button>
+
+                    </form>
+
+                </td>
+
+            </tr>
+
+            {% else %}
+
+            <tr>
+                <td colspan="3" class="empty">
+                    No subjects added.
+                </td>
+            </tr>
+
+            {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+{% endblock %}

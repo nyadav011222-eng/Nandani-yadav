@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Dashboard</h1>
+
+<p class="subtitle">
+    Welcome, {{ session.get('full_name') }}
+</p>
+
+<div class="cards">
+
+    <div class="card">
+        <h3>Total Students</h3>
+        <strong>{{ total_students }}</strong>
+    </div>
+
+    <div class="card">
+        <h3>Subjects</h3>
+        <strong>{{ total_subjects }}</strong>
+    </div>
+
+    <div class="card">
+        <h3>Lectures</h3>
+        <strong>{{ total_lectures }}</strong>
+    </div>
+
+    <div class="card">
+        <h3>Overall Attendance</h3>
+        <strong>{{ percentage }}%</strong>
+    </div>
+
+</div>
+
+
+<div class="panel">
+
+    <h2>College Setup</h2>
+
+    <form method="POST"
+          action="{{ url_for('settings') }}"
+          class="form-grid">
+
+        <div>
+            <label>College Name</label>
+
+            <input
+                name="college_name"
+                value="{{ college['college_name'] }}"
+                placeholder="College Name"
+            >
+        </div>
+
+        <div>
+            <label>Department</label>
+
+            <input
+                name="department"
+                value="{{ college['department'] }}"
+                placeholder="Computer Science"
+            >
+        </div>
+
+        <div>
+            <label>Class</label>
+
+            <input
+                name="class_name"
+                value="{{ college['class_name'] }}"
+                placeholder="B.Tech"
+            >
+        </div>
+
+        <div>
+            <label>Division</label>
+
+            <input
+                name="division"
+                value="{{ college['division'] }}"
+                placeholder="A"
+            >
+        </div>
+
+        <div>
+            <label>Academic Year</label>
+
+            <input
+                name="academic_year"
+                value="{{ college['academic_year'] }}"
+                placeholder="2026-27"
+            >
+        </div>
+
+        <div class="full">
+            <button class="btn primary">
+                Save Settings
+            </button>
+        </div>
+
+    </form>
+
+</div>
+
+{% endblock %}

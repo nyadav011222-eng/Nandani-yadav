@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="page-header">
+
+    <div>
+
+        <h1>Attendance Reports</h1>
+
+        <p>
+            Student-wise attendance summary.
+        </p>
+
+    </div>
+
+    <a
+        href="{{ url_for('export_report') }}"
+        class="btn primary">
+
+        Export CSV
+
+    </a>
+
+</div>
+
+
+<div class="panel">
+
+    <div class="table-wrapper">
+
+        <table>
+
+            <thead>
+
+            <tr>
+
+                <th>Roll</th>
+                <th>PRN</th>
+                <th>Name</th>
+                <th>Total</th>
+                <th>Present</th>
+                <th>Absent</th>
+                <th>Attendance</th>
+
+            </tr>
+
+            </thead>
+
+            <tbody>
+
+            {% for row in report %}
+
+            <tr>
+
+                <td>{{ row.roll_no }}</td>
+
+                <td>{{ row.prn }}</td>
+
+                <td>{{ row.name }}</td>
+
+                <td>{{ row.total }}</td>
+
+                <td>{{ row.present }}</td>
+
+                <td>{{ row.absent }}</td>
+
+                <td>
+
+                    {% if row.percentage < 75 %}
+
+                        <span class="badge danger-badge">
+                            {{ row.percentage }}%
+                        </span>
+
+                    {% else %}
+
+                        <span class="badge success-badge">
+                            {{ row.percentage }}%
+                        </span>
+
+                    {% endif %}
+
+                </td>
+
+            </tr>
+
+            {% else %}
+
+            <tr>
+
+                <td colspan="7"
+                    class="empty">
+
+                    No attendance data available.
+
+                </td>
+
+            </tr>
+
+            {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+{% endblock %}
