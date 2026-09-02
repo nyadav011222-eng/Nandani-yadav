@@ -7,7 +7,7 @@ import csv
 import io
 from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import date
+from datetime import date, timedelta
 import os
 
 app = Flask(__name__)
@@ -842,6 +842,60 @@ def toggle_lock(lecture_id):
 # REPORTS
 # --------------------------------------------------
 
+def build_attendance_report(start_date=None, end_date=None):
+
+    conn = get_db()
+
+    students = conn.execute("""
+        SELECT *
+        FROM students
+        WHERE active = 1
+        ORDER BY CAST(roll_no AS INTEGER), name
+    """).fetchall()
+
+    date_filter = ""
+    date_params = []
+    if start_date:
+        date_filter += " AND l.lecture_date >= ?"
+        date_params.append(start_date)
+    if end_date:
+        date_filter += " AND l.lecture_date <= ?"
+        date_params.append(end_date)
+
+    report = []
+
+    for student in students:
+
+        total = conn.execute(f"""
+            SELECT COUNT(*)
+            FROM attendance a
+            JOIN lectures l ON a.lecture_id = l.id
+            WHERE a.student_id = ?{date_filter}
+        """, [student["id"], *date_params]).fetchone()[0]
+
+        present = conn.execute(f"""
+            SELECT COUNT(*)
+            FROM attendance a
+            JOIN lectures l ON a.lecture_id = l.id
+            WHERE a.student_id = ?
+            AND a.status = 'P'{date_filter}
+        """, [student["id"], *date_params]).fetchone()[0]
+
+        report.append({
+            "id": student["id"],
+            "roll_no": student["roll_no"],
+            "prn": student["prn"],
+            "name": student["name"],
+            "total": total,
+            "present": present,
+            "absent": total - present,
+            "percentage": round(present * 100 / total, 2) if total else 0
+        })
+
+    conn.close()
+    return report
+
+
 @app.route("/reports")
 @login_required
 def reports():
@@ -854,59 +908,37 @@ def reports():
         ORDER BY name
     """).fetchall()
 
-    students = conn.execute("""
-        SELECT *
-        FROM students
-        WHERE active = 1
-        ORDER BY CAST(roll_no AS INTEGER), name
-    """).fetchall()
-
-    report = []
-
-    for student in students:
-
-        total = conn.execute("""
-            SELECT COUNT(*)
-            FROM attendance a
-            JOIN lectures l
-            ON a.lecture_id = l.id
-            WHERE a.student_id = ?
-        """, (student["id"],)).fetchone()[0]
-
-        present = conn.execute("""
-            SELECT COUNT(*)
-            FROM attendance a
-            JOIN lectures l
-            ON a.lecture_id = l.id
-            WHERE a.student_id = ?
-            AND a.status = 'P'
-        """, (student["id"],)).fetchone()[0]
-
-        percentage = 0
-
-        if total:
-            percentage = round(
-                present * 100 / total,
-                2
-            )
-
-        report.append({
-            "id": student["id"],
-            "roll_no": student["roll_no"],
-            "prn": student["prn"],
-            "name": student["name"],
-            "total": total,
-            "present": present,
-            "absent": total - present,
-            "percentage": percentage
-        })
-
     conn.close()
 
     return render_template(
         "reports.html",
-        report=report,
-        subjects=subjects
+        report=build_attendance_report(),
+        report_title="All-Time Attendance",
+        report_period="All recorded lectures"
+    )
+
+
+@app.route("/reports/<period>")
+@login_required
+def period_report(period):
+
+    today = date.today()
+    if period == "weekly":
+        start_date = today - timedelta(days=today.weekday())
+        report_title = "Weekly Attendance"
+        report_period = f"{start_date.isoformat()} to {today.isoformat()}"
+    elif period == "monthly":
+        start_date = today.replace(day=1)
+        report_title = "Monthly Attendance"
+        report_period = f"{start_date.isoformat()} to {today.isoformat()}"
+    else:
+        return redirect(url_for("reports"))
+
+    return render_template(
+        "reports.html",
+        report=build_attendance_report(start_date.isoformat(), today.isoformat()),
+        report_title=report_title,
+        report_period=report_period
     )
 
 
