@@ -38,6 +38,17 @@
 
         <div>
 
+            <label>Professor Name</label>
+
+            <input
+                name="professor_name"
+                placeholder="Professor Name"
+            >
+
+        </div>
+
+        <div>
+
             <button class="btn primary">
                 + Add Subject
             </button>
@@ -62,6 +73,7 @@
             <tr>
                 <th>Subject</th>
                 <th>Code</th>
+                <th>Professor</th>
                 <th>Action</th>
             </tr>
 
@@ -76,6 +88,8 @@
                 <td>{{ subject['name'] }}</td>
 
                 <td>{{ subject['code'] }}</td>
+
+                <td>{{ subject['professor_name'] or 'Not assigned' }}</td>
 
                 <td>
 
@@ -97,7 +111,7 @@
             {% else %}
 
             <tr>
-                <td colspan="3" class="empty">
+                <td colspan="4" class="empty">
                     No subjects added.
                 </td>
             </tr>
