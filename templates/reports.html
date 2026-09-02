@@ -6,21 +6,24 @@
 
     <div>
 
-        <h1>Attendance Reports</h1>
+        <h1>{{ report_title }}</h1>
 
         <p>
-            Student-wise attendance summary.
+            {{ report_period }}
         </p>
 
     </div>
 
-    <a
-        href="{{ url_for('export_report') }}"
-        class="btn primary">
+    <div class="report-links">
+        <a href="{{ url_for('reports') }}" class="btn">All Time</a>
+        <a href="{{ url_for('period_report', period='weekly') }}" class="btn">Weekly</a>
+        <a href="{{ url_for('period_report', period='monthly') }}" class="btn">Monthly</a>
+        <a href="{{ url_for('export_report') }}" class="btn primary">
 
-        Export CSV
+            Export CSV
 
-    </a>
+        </a>
+    </div>
 
 </div>
 
