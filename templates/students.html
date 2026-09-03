@@ -14,6 +14,38 @@
 
 <div class="panel">
 
+    <h2>Import Students</h2>
+
+    <p class="form-help">
+        Upload a CSV file with columns: roll_no, prn, name, class_name, division.
+        Required columns are roll_no, prn and name. Maximum 100 students per file.
+    </p>
+
+    <form method="POST"
+          action="{{ url_for('import_students') }}"
+          enctype="multipart/form-data"
+          class="import-form">
+
+        <input type="file"
+               name="student_file"
+               accept=".csv,text/csv"
+               required>
+
+        <button class="btn primary">
+            Import CSV
+        </button>
+
+        <a href="{{ url_for('student_import_sample') }}" class="btn">
+            Download Sample CSV
+        </a>
+
+    </form>
+
+</div>
+
+
+<div class="panel">
+
     <h2>Add Student</h2>
 
     <form method="POST"

@@ -1,5 +1,6 @@
 let currentLectureId = null;
 let currentLocked = false;
+let attendanceSaved = false;
 
 
 // ---------------------------------------
@@ -12,6 +13,7 @@ async function loadLecture() {
     const lectureDate = document.getElementById("lecture-date").value;
     const lectureNumber =
         document.getElementById("lecture-number").value;
+    const division = document.getElementById("division").value;
 
     if (!subject || !lectureDate || !lectureNumber) {
 
@@ -35,6 +37,7 @@ async function loadLecture() {
                 subject_id: subject,
                 lecture_date: lectureDate,
                 lecture_number: lectureNumber
+                , division_scope: division
 
             })
 
@@ -51,6 +54,7 @@ async function loadLecture() {
 
         currentLectureId = data.lecture_id;
         currentLocked = data.locked;
+        attendanceSaved = false;
 
         document
             .getElementById("attendance-area")
@@ -81,13 +85,17 @@ function updateAttendanceButtons(attendance) {
             "#attendance-body tr"
         );
 
+    if (!rows.length) {
+        alert("No students are available.");
+        return;
+    }
+
     rows.forEach(row => {
 
         const studentId =
             row.dataset.studentId;
 
-        const status =
-            attendance[studentId] || "A";
+        const status = attendance[studentId] || null;
 
         setRowStatus(row, status);
 
@@ -125,6 +133,8 @@ function setRowStatus(row, status) {
         button.classList.toggle("selected", selected);
         button.setAttribute("aria-pressed", selected ? "true" : "false");
     });
+
+    row.classList.toggle("not-marked", !status);
 
 
 }
@@ -192,10 +202,16 @@ async function saveAttendance() {
         const selectedButton =
             row.querySelector(".attendance-btn.selected");
 
-        records[studentId] =
-            selectedButton ? selectedButton.dataset.status : "A";
+        if (selectedButton) {
+            records[studentId] = selectedButton.dataset.status;
+        }
 
     });
+
+    if (!rows.length || Object.keys(records).length !== rows.length) {
+        alert("Mark Present or Absent for every student before saving.");
+        return;
+    }
 
 
     try {
@@ -227,6 +243,9 @@ async function saveAttendance() {
             await response.json();
 
         if (data.success) {
+
+            attendanceSaved = true;
+            updateLockStatus();
 
             alert(
                 "Attendance saved successfully."
@@ -261,6 +280,11 @@ async function toggleLectureLock() {
 
         alert("Load a lecture first.");
 
+        return;
+    }
+
+    if (!attendanceSaved && !currentLocked) {
+        alert("Save attendance before proceeding.");
         return;
     }
 
@@ -314,6 +338,11 @@ function updateLockStatus() {
 
     if (!element) {
         return;
+    }
+
+    const lockButton = document.getElementById("lock-lecture-button");
+    if (lockButton) {
+        lockButton.disabled = !currentLocked && !attendanceSaved;
     }
 
     if (currentLocked) {

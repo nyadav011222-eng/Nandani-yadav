@@ -30,6 +30,18 @@
 
         </div>
 
+        <div>
+            <label>Division</label>
+            <select id="division" onchange="window.location.href = '/attendance?division=' + encodeURIComponent(this.value)">
+                <option value="">All Divisions</option>
+                {% for division in divisions %}
+                <option value="{{ division['division'] }}" {% if division['division'] == selected_division %}selected{% endif %}>
+                    Division {{ division['division'] }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
 
         <div>
 
@@ -157,7 +169,7 @@
 
                     <button
                         type="button"
-                        class="attendance-btn absent selected"
+                        class="attendance-btn absent"
                         data-status="A"
                         onclick="setStudentAttendance(this, 'A')">
 
@@ -190,6 +202,8 @@
 
         <button
             class="btn"
+            id="lock-lecture-button"
+            disabled
             onclick="toggleLectureLock()">
 
             🔒 Lock / Unlock

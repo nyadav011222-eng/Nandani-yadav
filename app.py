@@ -5,6 +5,7 @@ from flask import (
 import sqlite3
 import csv
 import io
+import shutil
 from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import date, timedelta
@@ -13,7 +14,7 @@ import os
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "change-this-secret-key")
 
-DATABASE = "attendance.db"
+DATABASE = os.environ.get("DATABASE_PATH", "attendance.db")
 
 
 # --------------------------------------------------
@@ -28,6 +29,12 @@ def get_db():
 
 
 def init_db():
+    bundled_database = "attendance.db"
+    if DATABASE != bundled_database and not os.path.exists(DATABASE):
+        if os.path.exists(bundled_database):
+            os.makedirs(os.path.dirname(DATABASE), exist_ok=True)
+            shutil.copyfile(bundled_database, DATABASE)
+
     conn = get_db()
 
     conn.executescript("""
@@ -69,8 +76,9 @@ def init_db():
         subject_id INTEGER NOT NULL,
         lecture_date TEXT NOT NULL,
         lecture_number INTEGER NOT NULL,
+        division_scope TEXT DEFAULT '',
         locked INTEGER DEFAULT 0,
-        UNIQUE(subject_id, lecture_date, lecture_number),
+        UNIQUE(subject_id, lecture_date, lecture_number, division_scope),
         FOREIGN KEY(subject_id) REFERENCES subjects(id) ON DELETE CASCADE
     );
 
@@ -84,6 +92,34 @@ def init_db():
         FOREIGN KEY(student_id) REFERENCES students(id) ON DELETE CASCADE
     );
     """)
+
+    lecture_columns = {
+        row[1]
+        for row in conn.execute("PRAGMA table_info(lectures)").fetchall()
+    }
+    if "division_scope" not in lecture_columns:
+        conn.execute("PRAGMA foreign_keys = OFF")
+        conn.execute("""
+            CREATE TABLE lectures_new (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                subject_id INTEGER NOT NULL,
+                lecture_date TEXT NOT NULL,
+                lecture_number INTEGER NOT NULL,
+                division_scope TEXT DEFAULT '',
+                locked INTEGER DEFAULT 0,
+                UNIQUE(subject_id, lecture_date, lecture_number, division_scope),
+                FOREIGN KEY(subject_id) REFERENCES subjects(id) ON DELETE CASCADE
+            )
+        """)
+        conn.execute("""
+            INSERT INTO lectures_new
+            (id, subject_id, lecture_date, lecture_number, locked)
+            SELECT id, subject_id, lecture_date, lecture_number, locked
+            FROM lectures
+        """)
+        conn.execute("DROP TABLE lectures")
+        conn.execute("ALTER TABLE lectures_new RENAME TO lectures")
+        conn.execute("PRAGMA foreign_keys = ON")
 
     subject_columns = {
         row[1]
@@ -431,6 +467,110 @@ def add_student():
     return redirect(url_for("students"))
 
 
+@app.route("/students/import", methods=["POST"])
+@login_required
+def import_students():
+
+    uploaded_file = request.files.get("student_file")
+
+    if not uploaded_file or not uploaded_file.filename:
+        flash("Choose a CSV file to import.", "danger")
+        return redirect(url_for("students"))
+
+    try:
+        content = uploaded_file.stream.read().decode("utf-8-sig")
+        reader = csv.DictReader(io.StringIO(content))
+        required_columns = {"roll_no", "prn", "name"}
+        columns = {
+            column.strip().lower()
+            for column in (reader.fieldnames or [])
+            if column
+        }
+
+        if not required_columns.issubset(columns):
+            flash(
+                "CSV must include roll_no, prn and name columns.",
+                "danger"
+            )
+            return redirect(url_for("students"))
+
+        rows = list(reader)
+
+        if not rows:
+            flash("The CSV file does not contain any students.", "danger")
+            return redirect(url_for("students"))
+
+        if len(rows) > 100:
+            flash("You can import a maximum of 100 students at a time.", "danger")
+            return redirect(url_for("students"))
+
+        conn = get_db()
+        added = 0
+        skipped = 0
+        invalid = 0
+
+        try:
+            for row in rows:
+                normalized_row = {
+                    (key or "").strip().lower(): (value or "").strip()
+                    for key, value in row.items()
+                }
+                roll_no = normalized_row.get("roll_no", "")
+                prn = normalized_row.get("prn", "")
+                name = normalized_row.get("name", "")
+
+                if not roll_no or not prn or not name:
+                    invalid += 1
+                    continue
+
+                try:
+                    conn.execute(
+                        """
+                        INSERT INTO students
+                        (roll_no, prn, name, class_name, division)
+                        VALUES (?, ?, ?, ?, ?)
+                        """,
+                        (
+                            roll_no,
+                            prn,
+                            name,
+                            normalized_row.get("class_name", ""),
+                            normalized_row.get("division", "")
+                        )
+                    )
+                    added += 1
+                except sqlite3.IntegrityError:
+                    skipped += 1
+
+            conn.commit()
+        finally:
+            conn.close()
+
+        summary = f"Imported {added} student(s)."
+        if skipped:
+            summary += f" Skipped {skipped} duplicate PRN(s)."
+        if invalid:
+            summary += f" Skipped {invalid} incomplete row(s)."
+        flash(summary, "success" if added else "danger")
+
+    except (UnicodeDecodeError, csv.Error):
+        flash("The uploaded file is not a valid UTF-8 CSV file.", "danger")
+
+    return redirect(url_for("students"))
+
+
+@app.route("/students/sample.csv")
+@login_required
+def student_import_sample():
+
+    sample = "roll_no,prn,name,class_name,division\n1,PRN123456,Student Name,B.Tech CSE,A\n"
+    return Response(
+        sample,
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=students_sample.csv"}
+    )
+
+
 @app.route("/students/edit/<int:student_id>", methods=["POST"])
 @login_required
 def edit_student(student_id):
@@ -581,18 +721,27 @@ def delete_subject(subject_id):
 @login_required
 def attendance():
 
+    selected_division = request.args.get("division", "").strip()
     conn = get_db()
 
     subjects = conn.execute(
         "SELECT * FROM subjects ORDER BY name"
     ).fetchall()
 
+    divisions = conn.execute("""
+        SELECT DISTINCT division
+        FROM students
+        WHERE active = 1 AND TRIM(division) != ''
+        ORDER BY division
+    """).fetchall()
+
     students = conn.execute("""
         SELECT *
         FROM students
         WHERE active = 1
+        AND (? = '' OR division = ?)
         ORDER BY CAST(roll_no AS INTEGER), name
-    """).fetchall()
+    """, (selected_division, selected_division)).fetchall()
 
     conn.close()
 
@@ -600,6 +749,8 @@ def attendance():
         "attendence.html",
         subjects=subjects,
         students=students,
+        divisions=divisions,
+        selected_division=selected_division,
         today=date.today().isoformat()
     )
 
@@ -617,6 +768,7 @@ def create_lecture():
     subject_id = data.get("subject_id")
     lecture_date = data.get("lecture_date")
     lecture_number = data.get("lecture_number")
+    division_scope = (data.get("division_scope") or "").strip()
 
     if not subject_id or not lecture_date or not lecture_number:
         return jsonify({
@@ -632,10 +784,12 @@ def create_lecture():
         WHERE subject_id = ?
         AND lecture_date = ?
         AND lecture_number = ?
+        AND division_scope = ?
     """, (
         subject_id,
         lecture_date,
         lecture_number
+        , division_scope
     )).fetchone()
 
     if lecture:
@@ -648,33 +802,16 @@ def create_lecture():
 
             cursor = conn.execute("""
                 INSERT INTO lectures
-                (subject_id, lecture_date, lecture_number)
-                VALUES (?, ?, ?)
+                (subject_id, lecture_date, lecture_number, division_scope)
+                VALUES (?, ?, ?, ?)
             """, (
                 subject_id,
                 lecture_date,
-                lecture_number
+                lecture_number,
+                division_scope
             ))
 
             lecture_id = cursor.lastrowid
-
-            # Create default Absent records
-            students = conn.execute("""
-                SELECT id
-                FROM students
-                WHERE active = 1
-            """).fetchall()
-
-            for student in students:
-
-                conn.execute("""
-                    INSERT OR IGNORE INTO attendance
-                    (lecture_id, student_id, status)
-                    VALUES (?, ?, 'A')
-                """, (
-                    lecture_id,
-                    student["id"]
-                ))
 
             conn.commit()
 
@@ -688,10 +825,12 @@ def create_lecture():
                 WHERE subject_id = ?
                 AND lecture_date = ?
                 AND lecture_number = ?
+                AND division_scope = ?
             """, (
                 subject_id,
                 lecture_date,
-                lecture_number
+                lecture_number,
+                division_scope
             )).fetchone()
 
             lecture_id = lecture["id"]
@@ -718,6 +857,7 @@ def create_lecture():
         "success": True,
         "lecture_id": lecture_id,
         "locked": bool(lecture["locked"]),
+        "division_scope": lecture["division_scope"],
         "attendance": result
     })
 
@@ -766,6 +906,26 @@ def save_attendance():
             "success": False,
             "message": "Attendance is locked."
         }), 403
+
+    division_scope = lecture["division_scope"]
+    active_students = conn.execute("""
+        SELECT id
+        FROM students
+        WHERE active = 1
+        AND (? = '' OR division = ?)
+    """, (division_scope, division_scope)).fetchall()
+    active_student_ids = {str(student["id"]) for student in active_students}
+    submitted_student_ids = set(records)
+
+    if submitted_student_ids != active_student_ids or any(
+        records.get(student_id) not in ["P", "A"]
+        for student_id in active_student_ids
+    ):
+        conn.close()
+        return jsonify({
+            "success": False,
+            "message": "Mark Present or Absent for every student before saving."
+        }), 400
 
     for student_id, status in records.items():
 
@@ -818,6 +978,26 @@ def toggle_lock(lecture_id):
             "message": "Lecture not found."
         }), 404
 
+    if not lecture["locked"]:
+        division_scope = lecture["division_scope"]
+        active_students = conn.execute("""
+            SELECT id
+            FROM students
+            WHERE active = 1
+            AND (? = '' OR division = ?)
+        """, (division_scope, division_scope)).fetchall()
+        marked_students = conn.execute("""
+            SELECT COUNT(*)
+            FROM attendance
+            WHERE lecture_id = ?
+        """, (lecture_id,)).fetchone()[0]
+        if marked_students != len(active_students):
+            conn.close()
+            return jsonify({
+                "success": False,
+                "message": "Save attendance for every student before proceeding."
+            }), 400
+
     new_status = 0 if lecture["locked"] else 1
 
     conn.execute("""
@@ -842,7 +1022,9 @@ def toggle_lock(lecture_id):
 # REPORTS
 # --------------------------------------------------
 
-def build_attendance_report(start_date=None, end_date=None):
+def build_attendance_report(
+    start_date=None, end_date=None, subject_id=None, division=None
+):
 
     conn = get_db()
 
@@ -861,6 +1043,14 @@ def build_attendance_report(start_date=None, end_date=None):
     if end_date:
         date_filter += " AND l.lecture_date <= ?"
         date_params.append(end_date)
+    if subject_id:
+        date_filter += " AND l.subject_id = ?"
+        date_params.append(subject_id)
+    if division:
+        students = [
+            student for student in students
+            if student["division"] == division
+        ]
 
     report = []
 
@@ -908,19 +1098,44 @@ def reports():
         ORDER BY name
     """).fetchall()
 
+    subject_id = request.args.get("subject_id", type=int)
+    division = request.args.get("division", "").strip()
+    divisions = conn.execute("""
+        SELECT DISTINCT division
+        FROM students
+        WHERE active = 1 AND TRIM(division) != ''
+        ORDER BY division
+    """).fetchall()
     conn.close()
+    selected_subject = next(
+        (subject for subject in subjects if subject["id"] == subject_id),
+        None
+    )
 
     return render_template(
         "reports.html",
-        report=build_attendance_report(),
-        report_title="All-Time Attendance",
-        report_period="All recorded lectures"
+        report=build_attendance_report(subject_id=subject_id, division=division),
+        report_title=(
+            f"{selected_subject['name']} Attendance"
+            if selected_subject else "Overall Attendance"
+        ),
+        report_period=(
+            f"All recorded lectures for {selected_subject['name']}"
+            if selected_subject else "All recorded lectures across all subjects"
+        ),
+        subjects=subjects,
+        selected_subject_id=subject_id,
+        divisions=divisions,
+        selected_division=division
     )
 
 
 @app.route("/reports/<period>")
 @login_required
 def period_report(period):
+
+    subject_id = request.args.get("subject_id", type=int)
+    division = request.args.get("division", "").strip()
 
     today = date.today()
     if period == "weekly":
@@ -934,11 +1149,38 @@ def period_report(period):
     else:
         return redirect(url_for("reports"))
 
+    conn = get_db()
+    subjects = conn.execute(
+        "SELECT * FROM subjects ORDER BY name"
+    ).fetchall()
+    divisions = conn.execute("""
+        SELECT DISTINCT division
+        FROM students
+        WHERE active = 1 AND TRIM(division) != ''
+        ORDER BY division
+    """).fetchall()
+    conn.close()
+
+    selected_subject = next(
+        (subject for subject in subjects if subject["id"] == subject_id),
+        None
+    )
+
     return render_template(
         "reports.html",
-        report=build_attendance_report(start_date.isoformat(), today.isoformat()),
-        report_title=report_title,
-        report_period=report_period
+        report=build_attendance_report(
+            start_date.isoformat(), today.isoformat(), subject_id
+            , division
+        ),
+        report_title=(
+            f"{selected_subject['name']} {report_title}"
+            if selected_subject else f"Overall {report_title}"
+        ),
+        report_period=report_period,
+        subjects=subjects,
+        selected_subject_id=subject_id,
+        divisions=divisions,
+        selected_division=division
     )
 
 
@@ -951,13 +1193,27 @@ def period_report(period):
 def export_report():
 
     conn = get_db()
+    subject_id = request.args.get("subject_id", type=int)
+    division = request.args.get("division", "").strip()
+    period = request.args.get("period", "").strip()
+    today = date.today()
+    start_date = None
+    end_date = None
+    if period == "weekly":
+        start_date = today - timedelta(days=today.weekday())
+    elif period == "monthly":
+        start_date = today.replace(day=1)
+    if start_date:
+        start_date = start_date.isoformat()
+        end_date = today.isoformat()
 
     students = conn.execute("""
         SELECT *
         FROM students
         WHERE active = 1
+        AND (? = '' OR division = ?)
         ORDER BY CAST(roll_no AS INTEGER), name
-    """).fetchall()
+    """, (division, division)).fetchall()
 
     output = io.StringIO()
 
@@ -975,20 +1231,36 @@ def export_report():
 
     for student in students:
 
-        total = conn.execute("""
+        total_query = """
             SELECT COUNT(*)
-            FROM attendance
-            WHERE student_id = ?
-        """, 
-    (student["id"],)).fetchone()[0]
+            FROM attendance a
+            JOIN lectures l ON a.lecture_id = l.id
+            WHERE a.student_id = ?
+        """
+        total_params = [student["id"]]
+        if subject_id:
+            total_query += " AND l.subject_id = ?"
+            total_params.append(subject_id)
+        if start_date:
+            total_query += " AND l.lecture_date >= ? AND l.lecture_date <= ?"
+            total_params.extend([start_date, end_date])
+        total = conn.execute(total_query, total_params).fetchone()[0]
 
-        present = conn.execute("""
+        present_query = """
             SELECT COUNT(*)
-            FROM attendance
-            WHERE student_id = ?
-            AND status = 'P'
-        """, 
-    (student["id"],)).fetchone()[0]
+            FROM attendance a
+            JOIN lectures l ON a.lecture_id = l.id
+            WHERE a.student_id = ?
+            AND a.status = 'P'
+        """
+        present_params = [student["id"]]
+        if subject_id:
+            present_query += " AND l.subject_id = ?"
+            present_params.append(subject_id)
+        if start_date:
+            present_query += " AND l.lecture_date >= ? AND l.lecture_date <= ?"
+            present_params.extend([start_date, end_date])
+        present = conn.execute(present_query, present_params).fetchone()[0]
 
         absent = total - present
 

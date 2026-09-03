@@ -146,6 +146,18 @@ a {
     grid-column: 1 / -1;
 }
 
+.form-help {
+    color: #6b7280;
+    margin-bottom: 15px;
+}
+
+.import-form {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
 label {
     display: block;
     font-weight: 600;

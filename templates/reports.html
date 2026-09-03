@@ -15,10 +15,34 @@
     </div>
 
     <div class="report-links">
-        <a href="{{ url_for('reports') }}" class="btn">All Time</a>
-        <a href="{{ url_for('period_report', period='weekly') }}" class="btn">Weekly</a>
-        <a href="{{ url_for('period_report', period='monthly') }}" class="btn">Monthly</a>
-        <a href="{{ url_for('export_report') }}" class="btn primary">
+        <form method="GET" action="{{ url_for('reports') }}">
+            <input type="hidden" name="division" value="{{ selected_division }}">
+            <label for="report-subject">Subject</label>
+            <select id="report-subject" name="subject_id" onchange="this.form.submit()">
+                <option value="">Overall Report</option>
+                {% for subject in subjects %}
+                <option value="{{ subject['id'] }}" {% if subject['id'] == selected_subject_id %}selected{% endif %}>
+                    {{ subject['name'] }} ({{ subject['code'] }})
+                </option>
+                {% endfor %}
+            </select>
+        </form>
+        <form method="GET" action="{{ url_for('reports') }}">
+            <input type="hidden" name="subject_id" value="{{ selected_subject_id or '' }}">
+            <label for="report-division">Division</label>
+            <select id="report-division" name="division" onchange="this.form.submit()">
+                <option value="">All Divisions</option>
+                {% for division in divisions %}
+                <option value="{{ division['division'] }}" {% if division['division'] == selected_division %}selected{% endif %}>
+                    Division {{ division['division'] }}
+                </option>
+                {% endfor %}
+            </select>
+        </form>
+        <a href="{{ url_for('reports', subject_id=selected_subject_id, division=selected_division) }}" class="btn">All Time</a>
+        <a href="{{ url_for('period_report', period='weekly', subject_id=selected_subject_id, division=selected_division) }}" class="btn">Weekly</a>
+        <a href="{{ url_for('period_report', period='monthly', subject_id=selected_subject_id, division=selected_division) }}" class="btn">Monthly</a>
+        <a href="{{ url_for('export_report', subject_id=selected_subject_id, division=selected_division, period=request.view_args.get('period', '') if request.view_args else '') }}" class="btn primary">
 
             Export CSV
 
